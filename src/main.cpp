@@ -2,6 +2,7 @@
 #include <iostream>
 #include "json.hpp"
 #include "PID.h"
+#include "Twiddle.h"
 #include <math.h>
 
 // for convenience
@@ -38,25 +39,18 @@ int main()
   uWS::Hub h;
 
   PID pid_steering;
-  pid_steering.Init(
-    0.05, // Kp
-    0.0,  // Ki
-    0.0,  // Kd
-    0.05, // d_Kp
-    0.0,  // d_Ki
-    0.5   // d_Kd
-  );
+  pid_steering.Init(0.05, 0.0, 0.0);
+
+  Twiddle pid_steering_twiddle(pid_steering);
 
   PID pid_throttling;
-  pid_throttling.Init(
-    0.2,  // Kp
-    0.0,  // Ki
-    3.0   // Kd
-  );
+  pid_throttling.Init(0.2, 0.0, 3.0);
+
+  bool twiddle_in_progress = false;
 
   const double TARGET_SPEED = 60;
 
-  h.onMessage([&pid_steering, &pid_throttling, &TARGET_SPEED]
+  h.onMessage([&pid_steering, &pid_throttling, &pid_steering_twiddle, &TARGET_SPEED, &twiddle_in_progress]
               (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -84,12 +78,38 @@ int main()
           // DEBUG
           std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
 
-          json msgJson;
-          msgJson["steering_angle"] = steer_value;
-          msgJson["throttle"] = throttle_value;
-          auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-          std::cout << msg << std::endl;
-          ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+          if (twiddle_in_progress) {
+            if (pid_steering.Iteration() > 400) {
+              twiddle_in_progress = pid_steering_twiddle.Iterate();
+              resetSimulator(ws);
+              pid_steering.Reset();
+            } else {
+              json msgJson;
+              msgJson["steering_angle"] = steer_value;
+              msgJson["throttle"] = throttle_value;
+              auto msg = "42[\"steer\"," + msgJson.dump() + "]";
+              std::cout << msg << std::endl;
+              ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+            }
+          } else {
+            if (pid_steering.Iteration() > 100 && (fabs(cte) > 5.0 || speed < 10.0)) {
+              std::cout << "Looks like we need to optimize the steering PID" << std::endl;
+              std::cout << "Simulator reset" << std::endl;
+
+              twiddle_in_progress = true;
+              pid_steering_twiddle.Reset();
+
+              resetSimulator(ws);
+              pid_steering.Reset();
+            } else {
+              json msgJson;
+              msgJson["steering_angle"] = steer_value;
+              msgJson["throttle"] = throttle_value;
+              auto msg = "42[\"steer\"," + msgJson.dump() + "]";
+              std::cout << msg << std::endl;
+              ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+            }
+          }
         }
       } else {
         // Manual driving

@@ -4,20 +4,24 @@
 #include <vector>
 
 class PID {
-public:
   /*
   * Errors
   */
 
-  double p_error;   // proportional error
-  double i_error;   // integral error
-  double d_error;   // derivative error
-  double prev_cte;  // previous cross-track error
+  double p_error;           // proportional error
+  double i_error;           // integral error
+  double d_error;           // derivative error
+  double prev_cte;          // previous cross-track error
+  double sum_squared_error; // sum of squared errors
 
   /*
   * Coefficients
   */
   std::vector<double> gains;  // [Kp, Ki, Kd]
+
+  int iteration;
+
+public:
 
   /*
   * Constructor
@@ -32,10 +36,7 @@ public:
   /*
   * Initialize PID.
   */
-  void Init(
-    double Kp, double Ki, double Kd,
-    double d_Kp = 0.0, double d_Ki = 0.0, double d_Kd = 0.0
-  );
+  void Init(double Kp, double Ki, double Kd);
 
   /*
   * Update the PID error variables given cross track error.
@@ -48,9 +49,24 @@ public:
   double TotalError();
 
   /*
+  * Get iteration count.
+  */
+  int Iteration();
+
+  /*
+  * Calculate accumulated squared error.
+  */
+  double AccumulatedSquaredError();
+
+  /*
+  * Reset accumulated squared error and iteration count.
+  */
+  void Reset();
+
+  /*
    *
    **/
-  void Twiddle();
+  void UpdateGain(double delta, int gainIndex);
 };
 
 #endif /* PID_H */
