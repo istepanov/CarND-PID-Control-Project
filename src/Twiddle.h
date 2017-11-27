@@ -27,10 +27,19 @@ public:
   */
   virtual ~Twiddle();
 
+  /*
+  * Update PID gains between simulation runs.
+  */
   bool Iterate();
 
+  /*
+  * Destructor.
+  */
   void Reset();
 
+  /*
+  * Get PID gain deltas (for debugging)
+  */
   std::vector<double> GainDeltas();
 };
 

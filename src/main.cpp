@@ -39,8 +39,9 @@ int main()
   uWS::Hub h;
 
   PID pid_steering;
-  pid_steering.Init(0.0772711, 1.7275e-06, 0.674304);
 
+  // these are the values after initial twiddle run (so we don't have to run it again if we start from scratch).
+  pid_steering.Init(0.0772711, 1.7275e-06, 0.674304);
   Twiddle pid_steering_twiddle(pid_steering, 0.00528328, 1.29147e-07, 0.0643044);
 
   PID pid_throttling;
@@ -77,6 +78,10 @@ int main()
 
           if (twiddle_in_progress) {
             if (pid_steering.Iteration() > 200) {
+              // during twiddle run, we run the simulation for 200 iterations,
+              // trying to find best PID gains.
+
+              // if Iterate() return false, twiddle is complete.
               twiddle_in_progress = pid_steering_twiddle.Iterate();
               auto gains = pid_steering.Gains();
               auto gains_deltas = pid_steering_twiddle.GainDeltas();
@@ -104,11 +109,11 @@ int main()
             }
           } else {
             if (pid_steering.Iteration() > 100 && (fabs(cte) > 5.0 || speed < 10.0)) {
-              std::cout << "Looks like we need to optimize the steering PID" << std::endl;
 
+              // if error is too high or simulation stuck, start twiddle
+              std::cout << "Looks like we need to optimize the steering PID" << std::endl;
               twiddle_in_progress = true;
               pid_steering_twiddle.Reset();
-
               resetSimulator(ws);
               pid_steering.Reset();
             } else {
