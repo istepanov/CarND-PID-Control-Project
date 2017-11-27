@@ -1,12 +1,13 @@
 #ifndef TWIDDLE_H
 #define TWIDDLE_H
 
-#include <vector>
 #include "PID.h"
+#include <vector>
 
 class Twiddle {
   PID& pid_;
   std::vector<double> gain_deltas_;
+  std::vector<double> initial_gain_deltas_;
 
   int current_gain_index_;
   double best_error_;
@@ -19,20 +20,18 @@ public:
   /*
   * Constructor
   */
-  Twiddle(PID &p);
+  Twiddle(PID& pid, double d_Kp, double d_Ki, double d_Kd);
 
   /*
   * Destructor.
   */
   virtual ~Twiddle();
 
-  double BestError();
-
-  double GainDeltaSum();
-
   bool Iterate();
 
   void Reset();
+
+  std::vector<double> GainDeltas();
 };
 
 #endif /* TWIDDLE_H */

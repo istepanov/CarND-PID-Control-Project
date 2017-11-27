@@ -17,6 +17,10 @@ void PID::Init(double Kp, double Ki, double Kd) {
     iteration = 0;
 }
 
+const std::vector<double>& PID::Gains() {
+  return gains;
+}
+
 void PID::UpdateError(double cte) {
     p_error = cte;              // proportional error
     i_error += cte;             // integral error

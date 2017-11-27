@@ -39,9 +39,9 @@ int main()
   uWS::Hub h;
 
   PID pid_steering;
-  pid_steering.Init(0.05, 0.0, 0.0);
+  pid_steering.Init(0.0772711, 1.7275e-06, 0.674304);
 
-  Twiddle pid_steering_twiddle(pid_steering);
+  Twiddle pid_steering_twiddle(pid_steering, 0.00528328, 1.29147e-07, 0.0643044);
 
   PID pid_throttling;
   pid_throttling.Init(0.2, 0.0, 3.0);
@@ -75,12 +75,23 @@ int main()
           pid_throttling.UpdateError(speed_error);
           double throttle_value = pid_throttling.TotalError() * (1.0 / (1.0 + fabs(angle)));
 
-          // DEBUG
-          std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
-
           if (twiddle_in_progress) {
-            if (pid_steering.Iteration() > 400) {
+            if (pid_steering.Iteration() > 200) {
               twiddle_in_progress = pid_steering_twiddle.Iterate();
+              auto gains = pid_steering.Gains();
+              auto gains_deltas = pid_steering_twiddle.GainDeltas();
+
+              // DEBUG
+              std::cout << "PID parameters: " << gains[0] << " " << gains[1] << " " << gains[2] << std::endl;
+              std::cout << "Deltas: " << gains_deltas[0] << " " << gains_deltas[1] << " " << gains_deltas[2] << std::endl;
+              std::cout << "Accumulated squared error: " << pid_steering.AccumulatedSquaredError() << std::endl;
+
+              if (twiddle_in_progress) {
+                std::cout << "Keep optimizing..." << std::endl;
+              } else {
+                std::cout << "Optimization finished!" << std::endl;
+                pid_steering_twiddle.Reset();
+              }
               resetSimulator(ws);
               pid_steering.Reset();
             } else {
@@ -88,13 +99,12 @@ int main()
               msgJson["steering_angle"] = steer_value;
               msgJson["throttle"] = throttle_value;
               auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-              std::cout << msg << std::endl;
+              //std::cout << msg << std::endl;
               ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
             }
           } else {
             if (pid_steering.Iteration() > 100 && (fabs(cte) > 5.0 || speed < 10.0)) {
               std::cout << "Looks like we need to optimize the steering PID" << std::endl;
-              std::cout << "Simulator reset" << std::endl;
 
               twiddle_in_progress = true;
               pid_steering_twiddle.Reset();
@@ -106,7 +116,7 @@ int main()
               msgJson["steering_angle"] = steer_value;
               msgJson["throttle"] = throttle_value;
               auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-              std::cout << msg << std::endl;
+              //std::cout << msg << std::endl;
               ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
             }
           }

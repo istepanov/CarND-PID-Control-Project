@@ -38,6 +38,8 @@ public:
   */
   void Init(double Kp, double Ki, double Kd);
 
+  const std::vector<double>& Gains();
+
   /*
   * Update the PID error variables given cross track error.
   */
