@@ -2,8 +2,7 @@
 #include <math.h>
 #include <numeric>
 
-Twiddle::Twiddle(PID& pid, double d_Kp, double d_Ki, double d_Kd): pid_(pid)
-{
+Twiddle::Twiddle(PID& pid, double d_Kp, double d_Ki, double d_Kd): pid_(pid) {
     initial_gain_deltas_ = std::vector<double> {d_Kp, d_Ki, d_Kd};
     gain_deltas_.resize(3);
     this->Reset();
