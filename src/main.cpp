@@ -40,14 +40,14 @@ int main()
 
   PID pid_steering;
 
-  // these are the values after initial twiddle run (so we don't have to run it again if we start from scratch).
-  pid_steering.Init(0.0772711, 1.7275e-06, 0.674304);
-  Twiddle pid_steering_twiddle(pid_steering, 0.00528328, 1.29147e-07, 0.0643044);
+  // these values were found using Twiddle (if twiddle_in_progress is true)
+  pid_steering.Init(0.0837465, 2.0899e-06, 1.44656);
+  Twiddle pid_steering_twiddle(pid_steering, 0.0109888, 1.0943e-07, 0.110536);
 
   PID pid_throttling;
   pid_throttling.Init(0.2, 0.0, 3.0);
 
-  bool twiddle_in_progress = false;
+  bool twiddle_in_progress = false;  // set to true to enable twiddle
 
   const double TARGET_SPEED = 60;
 
@@ -77,8 +77,8 @@ int main()
           double throttle_value = pid_throttling.TotalError() * (1.0 / (1.0 + fabs(angle)));
 
           if (twiddle_in_progress) {
-            if (pid_steering.Iteration() > 200) {
-              // during twiddle run, we run the simulation for 200 iterations,
+            if (pid_steering.Iteration() > 2000) {
+              // during twiddle run, we run the simulation for 2000 iterations,
               // trying to find best PID gains.
 
               // if Iterate() return false, twiddle is complete.
@@ -108,22 +108,11 @@ int main()
               ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
             }
           } else {
-            if (pid_steering.Iteration() > 100 && (fabs(cte) > 5.0 || speed < 10.0)) {
-
-              // if error is too high or simulation stuck, start twiddle
-              std::cout << "Looks like we need to optimize the steering PID" << std::endl;
-              twiddle_in_progress = true;
-              pid_steering_twiddle.Reset();
-              resetSimulator(ws);
-              pid_steering.Reset();
-            } else {
-              json msgJson;
-              msgJson["steering_angle"] = steer_value;
-              msgJson["throttle"] = throttle_value;
-              auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-              //std::cout << msg << std::endl;
-              ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
-            }
+            json msgJson;
+            msgJson["steering_angle"] = steer_value;
+            msgJson["throttle"] = throttle_value;
+            auto msg = "42[\"steer\"," + msgJson.dump() + "]";
+            ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
           }
         }
       } else {
